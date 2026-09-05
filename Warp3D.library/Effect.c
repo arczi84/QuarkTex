@@ -20,6 +20,8 @@ ULONG W3D_SetBlendMode(__REGA0(W3D_Context *context), __REGD0(ULONG srcfunc), __
 }
 ULONG W3D_SetDrawRegion(__REGA0(W3D_Context *context), __REGA1(struct BitMap *bm), __REGD1(int yoffset), __REGA2(W3D_Scissor *scissor)) {
 	LOG;
+	context->drawregion = bm;
+	context->yoffset = yoffset;
 	if (fullscreen) swapBuffers();
 	return W3D_SUCCESS;
 }
