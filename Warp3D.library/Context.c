@@ -156,7 +156,7 @@ ULONG W3D_SetState(W3D_Context *context __asm("a0"), ULONG state __asm("d0"), UL
 		case W3D_PERSPECTIVE:		break;
 		case W3D_GOURAUD:			_glShadeModel(GL_SMOOTH); break;
 		case W3D_ZBUFFER:			_glEnable(GL_DEPTH_TEST); break;
-		case W3D_ZBUFFERUPDATE:		//qlDepthMask(GL_FALSE); break;
+		case W3D_ZBUFFERUPDATE:		_glDepthMask(GL_TRUE); break;
 		case W3D_BLENDING:			_glEnable(GL_BLEND); break;
 		case W3D_FOGGING:			_glEnable(GL_FOG); break;
 		case W3D_ANTI_POINT:		break;
@@ -187,7 +187,7 @@ ULONG W3D_SetState(W3D_Context *context __asm("a0"), ULONG state __asm("d0"), UL
 		case W3D_PERSPECTIVE:		break;
 		case W3D_GOURAUD:			_glShadeModel(GL_FLAT); break;
 		case W3D_ZBUFFER:			_glDisable(GL_DEPTH_TEST); break;
-		case W3D_ZBUFFERUPDATE:		//qlDepthMask(GL_TRUE); break;
+		case W3D_ZBUFFERUPDATE:		_glDepthMask(GL_FALSE); break;
 		case W3D_BLENDING:			_glDisable(GL_BLEND); break;
 		case W3D_FOGGING:			_glDisable(GL_FOG); break;
 		case W3D_ANTI_POINT:		break;
