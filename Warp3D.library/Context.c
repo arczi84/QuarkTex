@@ -76,7 +76,11 @@ W3D_Context *W3D_CreateContext(__REGA0(ULONG *error),__REGA1(struct TagItem *CCT
 	context->ColorPointer = NULL; context->CPStride = 0; context->CPMode = 0; context->CPFlags = 0;
 	context->FrontFaceOrder = 0; context->specialbuffer = 0;
 
-	for (; CCTags->ti_Tag != TAG_DONE; ++CCTags) { if (CCTags->ti_Tag == W3D_CC_MODEID) { fullscreen = 1; modeid = CCTags->ti_Data; } }
+	for (; CCTags->ti_Tag != TAG_DONE; ++CCTags) {
+		if (CCTags->ti_Tag == W3D_CC_MODEID) { fullscreen = 1; modeid = CCTags->ti_Data; }
+		if (CCTags->ti_Tag == W3D_CC_BITMAP) bitmap = (struct BitMap *)CCTags->ti_Data;
+		if (CCTags->ti_Tag == W3D_CC_YOFFSET) context->yoffset = CCTags->ti_Data;
+	}
 
 	if (fullscreen) {
 		oldscrollvport = SetFunction((struct Library *)GfxBase, -588, blub);
@@ -118,6 +122,8 @@ W3D_Context *W3D_CreateContext(__REGA0(ULONG *error),__REGA1(struct TagItem *CCT
 	context->state |= W3D_GOURAUD; _glShadeModel(GL_SMOOTH);
 	context->state |= W3D_ZBUFFERUPDATE; //qlDepthMask(GL_FALSE);
 	
+	/* Retain the destination for explicit CPU readback in W3D_WaitIdle. */
+	context->drawregion = bitmap;
 	if (error) *error = W3D_SUCCESS;
 	return context;
 }

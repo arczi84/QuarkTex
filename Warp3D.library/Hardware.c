@@ -16,9 +16,43 @@ void W3D_UnLockHardware(__REGA0(W3D_Context *context)) {
 	LOG;
 	context->HWlocked = W3D_FALSE;
 }
+/* Synchronize the host back buffer to the Amiga destination at the explicit
+ * CPU synchronization point. Ordinary draw/flush/swap calls do not read back.
+ * This makes standard Warp3D + CyberGraphX readback work without UAE calls
+ * or knowledge of QuarkTex inside MiniGL/the application. */
+static void sync_bitmap(W3D_Context *context) {
+	struct RastPort rp;
+	struct RenderInfo ri;
+	UBYTE *pixels;
+	int y, bytes;
+	if (!context->drawregion || width <= 0 || height <= 0 || width > 8191 ||
+		height > 0x7fffffff / (width * 4)) return;
+	bytes = width * 4;
+	pixels = malloc(bytes * height);
+	if (!pixels) return;
+	_glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
+	_glPixelStorei(GL_PACK_ALIGNMENT, 1);
+	_glPixelStorei(GL_PACK_ROW_LENGTH, 0);
+	_glPixelStorei(GL_PACK_SKIP_ROWS, 0);
+	_glPixelStorei(GL_PACK_SKIP_PIXELS, 0);
+	_glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE,
+		(GLvoid *)(memoffset + (ULONG)pixels));
+	_glPopClientAttrib();
+	InitRastPort(&rp);
+	rp.BitMap = context->drawregion;
+	ri.BytesPerRow = bytes;
+	ri.pad = 0;
+	ri.RGBFormat = RGBFB_R8G8B8A8;
+	for (y = 0; y < height; ++y) {
+		ri.Memory = pixels + (height - 1 - y) * bytes;
+		p96WritePixelArray(&ri, 0, 0, &rp, 0, y + context->yoffset, width, 1);
+	}
+	free(pixels);
+}
 void W3D_WaitIdle(__REGA0(W3D_Context *context)) {
 	LOG;
 	_glFinish();
+	sync_bitmap(context);
 }
 ULONG W3D_CheckIdle(__REGA0(W3D_Context *context)) {
 	LOG;
