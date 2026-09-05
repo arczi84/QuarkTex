@@ -9,6 +9,7 @@ ULONG W3D_CheckDriver(void) {
 }
 ULONG W3D_LockHardware(__REGA0(W3D_Context *context)) {
 	LOG;
+	sync_window(context);
 	context->HWlocked = W3D_TRUE;
 	return W3D_SUCCESS;
 }
