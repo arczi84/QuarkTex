@@ -30,6 +30,8 @@ extern struct Library *P96Base;
 extern char *bp, b;
 extern int i;
 
+void sync_window(W3D_Context *context);
+
 extern int fullscreen;
 extern int width, height;
 

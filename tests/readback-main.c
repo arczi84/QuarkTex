@@ -2,6 +2,7 @@
 int main(void) {
     struct BitMap first, second;
     W3D_Context context = { &first, 0 };
+    W3D_Scissor scissor = { 0, 0, 3, 2 };
     const int original_pack[4] = {8, 17, 5, 3};
     int i, old_allocations;
     memset(&first, 0xa5, sizeof(first));
@@ -17,6 +18,7 @@ int main(void) {
     /* Switching destinations must use the new bitmap and the supplied offset. */
     assert(W3D_SetDrawRegion(&context, &second, 1, NULL) == W3D_SUCCESS);
     assert(!swaps && context.drawregion == &second && context.yoffset == 1);
+    assert(window_syncs == 1 && !scissor_updates);
     W3D_WaitIdle(&context);
     assert(reads == 2 && writes == 4 && allocations == 2 && frees == 2);
     assert(!memcmp(second.data + 12, host_pixels + 12, 12));
@@ -25,8 +27,9 @@ int main(void) {
     for (i = 36; i < 48; ++i) assert(second.data[i] == 0xa5);
     assert(!pack_depth && !memcmp(pack, original_pack, sizeof(pack)));
     fullscreen = 1;
-    W3D_SetDrawRegion(&context, &first, 0, NULL);
+    W3D_SetDrawRegion(&context, &first, 0, &scissor);
     assert(swaps == 1 && context.drawregion == &first && !context.yoffset);
+    assert(window_syncs == 2 && scissor_updates == 1);
 
     /* Missing destination, invalid geometry and allocation failure are no-ops
      * for bitmap copying; the explicit GL finish must still happen. */

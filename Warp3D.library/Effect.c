@@ -1,5 +1,7 @@
 #include "w3d.h"
 
+void W3D_SetScissor(__REGA0(W3D_Context *context), __REGA1(W3D_Scissor *scissor));
+
 GLenum w3dalpha[] = {0, GL_NEVER, GL_LESS, GL_GEQUAL, GL_LEQUAL, GL_GREATER, GL_NOTEQUAL, GL_EQUAL, GL_ALWAYS};
 GLenum w3dblend[] = {0, GL_ZERO, GL_ONE, GL_SRC_COLOR, GL_DST_COLOR, GL_ONE_MINUS_SRC_COLOR, GL_ONE_MINUS_DST_COLOR, GL_SRC_ALPHA,
 	GL_ONE_MINUS_SRC_ALPHA, GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA, GL_SRC_ALPHA_SATURATE, GL_CONSTANT_COLOR, GL_ONE_MINUS_CONSTANT_COLOR,
@@ -22,6 +24,8 @@ ULONG W3D_SetDrawRegion(__REGA0(W3D_Context *context), __REGA1(struct BitMap *bm
 	LOG;
 	context->drawregion = bm;
 	context->yoffset = yoffset;
+	sync_window(context);
+	if (scissor) W3D_SetScissor(context, scissor);
 	if (fullscreen) swapBuffers();
 	return W3D_SUCCESS;
 }
@@ -76,6 +80,9 @@ ULONG W3D_SetCurrentPen(__REGA0(W3D_Context *context), __REGD1(ULONG pen)) {
 
 void W3D_SetScissor(__REGA0(W3D_Context *context), __REGA1(W3D_Scissor *scissor)) {
 	LOG;
+	if (!scissor) return;
+	context->scissor = *scissor;
+	sync_window(context);
 	_glScissor(scissor->left,
 	height - (scissor->top + scissor->height),
 	//60,

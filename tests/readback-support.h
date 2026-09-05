@@ -24,6 +24,16 @@ static int width = 3, height = 2, fullscreen;
 /* A nonzero translation exercises the guest-to-host pointer conversion. */
 static ULONG memoffset = 4096;
 static int finishes, reads, writes, swaps, allocations, frees, fail_alloc;
+static int window_syncs, scissor_updates;
+/* Resize/scissor math has its own regression suite. Here verify that the
+ * merged SetDrawRegion keeps those callbacks alongside bitmap tracking. */
+static void sync_window(W3D_Context *context) {
+    assert(context); ++window_syncs;
+}
+static void W3D_SetScissor(W3D_Context *context, W3D_Scissor *scissor) {
+    assert(context && scissor && scissor->width == 3 && scissor->height == 2);
+    ++scissor_updates;
+}
 static int pack_depth, pack[4] = {8, 17, 5, 3}, saved_pack[4];
 static const unsigned char host_pixels[24] = {
     10,11,12,13, 20,21,22,23, 30,31,32,33,

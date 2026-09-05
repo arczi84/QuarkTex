@@ -5,6 +5,7 @@
 
 struct Window* window = NULL;
 int left, top;
+static W3D_Context *windowContext = NULL;
 
 //struct Task *task = NULL;
 
@@ -18,13 +19,41 @@ VOID (*oldRectFill)(__REGA1(struct RastPort *rp), __REGD0(LONG xMin), __REGD1(LO
 ULONG (*oldchangescreenbuffer)(VOID) = NULL;
 ULONG (*oldClipBlit)(VOID) = NULL;
 
+/* Keep the host drawable and Warp3D pixel coordinates in step with Intuition.
+ * Run before drawing as well as presenting: resizing only at swap time leaves
+ * the first frame rendered with the old viewport and modelview matrix. */
+void sync_window(W3D_Context *context) {
+	int newLeft, newTop, newWidth, newHeight, resized;
+	if (fullscreen || !window || !context) return;
+	newLeft = window->LeftEdge + window->BorderLeft;
+	newTop = window->TopEdge + window->BorderTop;
+	newWidth = window->Width - window->BorderLeft - window->BorderRight;
+	newHeight = window->Height - window->BorderTop - window->BorderBottom;
+	if (newWidth <= 0 || newHeight <= 0) return;
+	resized = newWidth != width || newHeight != height;
+	if (left == newLeft && top == newTop && !resized) return;
+	left = newLeft;
+	top = newTop;
+	width = newWidth;
+	height = newHeight;
+	moveWindow(left, top, width, height);
+	if (resized) {
+		context->width = width;
+		context->height = height;
+		_glViewport(0, 0, width, height);
+		_glMatrixMode(GL_MODELVIEW);
+		_glLoadIdentity();
+		_glScalef(2.0f / width, -2.0f / height, 1.0f);
+		_glTranslatef(-width / 2.0f, -height / 2.0f, 0.0f);
+		_glScissor(context->scissor.left,
+			height - (context->scissor.top + context->scissor.height),
+			context->scissor.width, context->scissor.height);
+	}
+}
+
 static ULONG W3D_ClipBlit(VOID) {
 	LOG;
-	if (left != window->LeftEdge + window->BorderLeft || top != window->TopEdge + window->BorderTop) {
-		left = window->LeftEdge + window->BorderLeft;
-		top = window->TopEdge + window->BorderTop;
-		moveWindow(left, top, width, height);
-	}
+	sync_window(windowContext);
 	swapBuffers();
 	return 1;
 }
@@ -76,6 +105,7 @@ W3D_Context *W3D_CreateContext(__REGA0(ULONG *error),__REGA1(struct TagItem *CCT
 	context->ColorPointer = NULL; context->CPStride = 0; context->CPMode = 0; context->CPFlags = 0;
 	context->FrontFaceOrder = 0; context->specialbuffer = 0;
 
+	fullscreen = 0;
 	for (; CCTags->ti_Tag != TAG_DONE; ++CCTags) {
 		if (CCTags->ti_Tag == W3D_CC_MODEID) { fullscreen = 1; modeid = CCTags->ti_Data; }
 		if (CCTags->ti_Tag == W3D_CC_BITMAP) bitmap = (struct BitMap *)CCTags->ti_Data;
@@ -124,6 +154,12 @@ W3D_Context *W3D_CreateContext(__REGA0(ULONG *error),__REGA1(struct TagItem *CCT
 	
 	/* Retain the destination for explicit CPU readback in W3D_WaitIdle. */
 	context->drawregion = bitmap;
+	context->width = width;
+	context->height = height;
+	context->scissor.left = context->scissor.top = 0;
+	context->scissor.width = width;
+	context->scissor.height = height;
+	windowContext = context;
 	if (error) *error = W3D_SUCCESS;
 	return context;
 }
@@ -137,6 +173,8 @@ void W3D_DestroyContext(__REGA0(W3D_Context *context)) {
 		SetFunction((struct Library *)IntuitionBase, -780, oldchangescreenbuffer);
 	}
 	else SetFunction((struct Library *) GfxBase, -552, oldClipBlit);
+	windowContext = NULL;
+	window = NULL;
 	free(context->drawmem);
 	free(context->queue);
 	free(context);
