@@ -137,15 +137,13 @@ static float color[] = {0.0, 0.0, 0.0, 0.0};
 static long envs[] = {0, GL_REPLACE, GL_DECAL, GL_MODULATE, GL_BLEND};
 
 ULONG W3D_SetTexEnv(__REGA0(W3D_Context *context), __REGA1(W3D_Texture *texture), __REGD1(ULONG envparam), __REGA2(W3D_Color *envcolor)) {
-	W3D_Color *pcolor;
 	LOG;
-	pcolor = (W3D_Color*) malloc(sizeof(W3D_Color));
-	*pcolor = *envcolor;
 	((Texture*) texture->driver)->envparam = envparam;
-	((Texture*) texture->driver)->envcolor.r = pcolor->r;
-	((Texture*) texture->driver)->envcolor.g = pcolor->g;
-	((Texture*) texture->driver)->envcolor.b = pcolor->b;
-	((Texture*) texture->driver)->envcolor.a = pcolor->a;
+	/* The color is optional when changing the environment mode. Copy it
+	 * directly when supplied; the old temporary allocation was never freed. */
+	if (envcolor) {
+		((Texture*) texture->driver)->envcolor = *envcolor;
+	}
 	_glBindTexture(GL_TEXTURE_2D, ((Texture*) texture->driver)->glID);
 	if (((Texture*) texture->driver)->envparam) _glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, envs[((Texture*) texture->driver)->envparam]);
 	if (((Texture*) texture->driver)->envparam == W3D_BLEND) {
@@ -161,10 +159,14 @@ ULONG W3D_SetWrapMode(__REGA0(W3D_Context *context), __REGA1(W3D_Texture *textur
 	LOG;
 	((Texture*) texture->driver)->s_mode = wrap[s_mode];
 	((Texture*) texture->driver)->t_mode = wrap[t_mode];
-	((Texture*) texture->driver)->bordercolor.r = bordercolor->r;
-	((Texture*) texture->driver)->bordercolor.g = bordercolor->g;
-	((Texture*) texture->driver)->bordercolor.b = bordercolor->b;
-	((Texture*) texture->driver)->bordercolor.a = bordercolor->a;
+	/* Classic MiniGL passes NULL when only the wrap modes change.
+	 * Retain the existing border color instead of reading address zero. */
+	if (bordercolor) {
+		((Texture*) texture->driver)->bordercolor.r = bordercolor->r;
+		((Texture*) texture->driver)->bordercolor.g = bordercolor->g;
+		((Texture*) texture->driver)->bordercolor.b = bordercolor->b;
+		((Texture*) texture->driver)->bordercolor.a = bordercolor->a;
+	}
 	_glBindTexture(GL_TEXTURE_2D, ((Texture*) texture->driver)->glID);
 	if (((Texture*) texture->driver)->s_mode) _glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (long) ((Texture*) texture->driver)->s_mode);
 	if (((Texture*) texture->driver)->t_mode) _glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (long) ((Texture*) texture->driver)->t_mode);
